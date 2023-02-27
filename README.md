@@ -1,6 +1,6 @@
 # Domain
 
-This provides basic definitions for building application domain models in Go
+This package provides basic definitions for building application domain models in Go
 following a DDD approach.
 
 Things included are:
@@ -8,17 +8,17 @@ Things included are:
 - Entity identifiers generator.
 - Domain event recording traits.
 - Domain event dispatching and publishing definitions.
-- Continuation token pagination primitives.
+- [Continuation token pagination](https://phauer.com/2018/web-api-pagination-timestamp-id-continuation-token/) primitives.
 
 ## Installation
 
 ```bash
-go get github.com/tangelo-labs/go-domain
+go get github.com/tangelo-labs/go-domainkit
 ```
 
-## Examples
+## Example
 
-### Defining Aggregate Roots
+Defining aggregate roots:
 
 ```go
 package main
