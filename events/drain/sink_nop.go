@@ -1,6 +1,6 @@
 package drain
 
-import "github.com/tangelo-labs/go-domainkit/events"
+import "github.com/tangelo-labs/go-domain/events"
 
 type nopSink struct {
 	*baseSink

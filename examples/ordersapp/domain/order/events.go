@@ -1,7 +1,5 @@
 package order
 
-import "github.com/tangelo-labs/go-domainkit"
-
 // CreatedEvent a domain event that is raised when an order is created.
 type CreatedEvent struct {
 	OrderID domain.ID

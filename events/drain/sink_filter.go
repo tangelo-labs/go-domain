@@ -3,7 +3,7 @@ package drain
 import (
 	"fmt"
 
-	"github.com/tangelo-labs/go-domainkit/events"
+	"github.com/tangelo-labs/go-domain/events"
 )
 
 // FilterFn defines a function filters out events.

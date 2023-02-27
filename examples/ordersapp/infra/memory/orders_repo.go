@@ -4,9 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/tangelo-labs/go-domainkit"
-	"github.com/tangelo-labs/go-domainkit/examples/ordersapp/domain/order"
-	"github.com/tangelo-labs/go-domainkit/examples/ordersapp/ucs/repos"
+	"github.com/tangelo-labs/go-domain/examples/ordersapp/domain/order"
+	"github.com/tangelo-labs/go-domain/examples/ordersapp/ucs/repos"
 )
 
 type ordersRepo struct {

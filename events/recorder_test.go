@@ -6,8 +6,8 @@ import (
 
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
-	domain "github.com/tangelo-labs/go-domainkit"
-	"github.com/tangelo-labs/go-domainkit/events"
+	domain "github.com/tangelo-labs/go-domain"
+	"github.com/tangelo-labs/go-domain/events"
 )
 
 func TestBaseRecorder(t *testing.T) {

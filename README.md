@@ -13,7 +13,7 @@ Things included are:
 ## Installation
 
 ```bash
-go get github.com/tangelo-labs/go-domainkit
+go get github.com/tangelo-labs/go-domain
 ```
 
 ## Example

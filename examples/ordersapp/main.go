@@ -5,12 +5,12 @@ package main
 import (
 	"net/http"
 
-	"github.com/tangelo-labs/go-domainkit/events/dispatcher"
-	"github.com/tangelo-labs/go-domainkit/examples/ordersapp/infra/memory"
-	"github.com/tangelo-labs/go-domainkit/examples/ordersapp/transport/httpadapter"
-	"github.com/tangelo-labs/go-domainkit/examples/ordersapp/ucs/addline"
-	"github.com/tangelo-labs/go-domainkit/examples/ordersapp/ucs/create"
-	"github.com/tangelo-labs/go-domainkit/examples/ordersapp/ucs/get"
+	"github.com/tangelo-labs/go-domain/events/dispatcher"
+	"github.com/tangelo-labs/go-domain/examples/ordersapp/infra/memory"
+	"github.com/tangelo-labs/go-domain/examples/ordersapp/transport/httpadapter"
+	"github.com/tangelo-labs/go-domain/examples/ordersapp/ucs/addline"
+	"github.com/tangelo-labs/go-domain/examples/ordersapp/ucs/create"
+	"github.com/tangelo-labs/go-domain/examples/ordersapp/ucs/get"
 )
 
 func main() {

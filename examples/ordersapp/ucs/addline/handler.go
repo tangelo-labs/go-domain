@@ -3,11 +3,10 @@ package addline
 import (
 	"context"
 
-	"github.com/tangelo-labs/go-domainkit"
-	"github.com/tangelo-labs/go-domainkit/events"
-	"github.com/tangelo-labs/go-domainkit/events/dispatcher"
-	"github.com/tangelo-labs/go-domainkit/examples/ordersapp/domain/order"
-	"github.com/tangelo-labs/go-domainkit/examples/ordersapp/ucs/repos"
+	"github.com/tangelo-labs/go-domain/events"
+	"github.com/tangelo-labs/go-domain/events/dispatcher"
+	"github.com/tangelo-labs/go-domain/examples/ordersapp/domain/order"
+	"github.com/tangelo-labs/go-domain/examples/ordersapp/ucs/repos"
 )
 
 // Handler sugar syntax for the UC.

@@ -2,8 +2,8 @@ package eventrequire
 
 import (
 	"github.com/stretchr/testify/require"
-	"github.com/tangelo-labs/go-domainkit/events"
-	"github.com/tangelo-labs/go-domainkit/events/eventtest/eventassert"
+	"github.com/tangelo-labs/go-domain/events"
+	"github.com/tangelo-labs/go-domain/events/eventtest/eventassert"
 )
 
 // RecordedLen asserts that the given Recorder object has recorded the

@@ -3,8 +3,8 @@ package drain_test
 import (
 	"testing"
 
-	"github.com/tangelo-labs/go-domainkit/events"
-	"github.com/tangelo-labs/go-domainkit/events/drain"
+	"github.com/tangelo-labs/go-domain/events"
+	"github.com/tangelo-labs/go-domain/events/drain"
 )
 
 func TestFilter(t *testing.T) {

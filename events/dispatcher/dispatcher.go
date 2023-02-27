@@ -14,7 +14,7 @@ import (
 
 	"github.com/botchris/go-pubsub"
 	"github.com/botchris/go-pubsub/provider/memory"
-	"github.com/tangelo-labs/go-domainkit/events"
+	"github.com/tangelo-labs/go-domain/events"
 )
 
 // ErrInvalidHandlerFunc returned when subscribing with an invalid handler function.

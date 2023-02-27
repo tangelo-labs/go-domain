@@ -1,8 +1,7 @@
 package order
 
 import (
-	"github.com/tangelo-labs/go-domainkit"
-	"github.com/tangelo-labs/go-domainkit/events"
+	"github.com/tangelo-labs/go-domain/events"
 )
 
 // Order is a products order.

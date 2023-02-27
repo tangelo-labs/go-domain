@@ -7,8 +7,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis"
-	domain "github.com/tangelo-labs/go-domainkit"
-	"github.com/tangelo-labs/go-domainkit/events"
+	domain "github.com/tangelo-labs/go-domain"
+	"github.com/tangelo-labs/go-domain/events"
 )
 
 // KinesisAPI represents a Kinesis client for sending events.

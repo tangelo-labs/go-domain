@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	domain "github.com/tangelo-labs/go-domainkit"
+	domain "github.com/tangelo-labs/go-domain"
 )
 
 // ContinuationToken models a general purpose Continuation Token.

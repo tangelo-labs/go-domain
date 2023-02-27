@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/tangelo-labs/go-domainkit/events"
+	"github.com/tangelo-labs/go-domain/events"
 )
 
 type writerSink struct {

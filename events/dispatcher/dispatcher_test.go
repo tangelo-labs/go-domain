@@ -8,7 +8,7 @@ import (
 	"github.com/Avalanche-io/counter"
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
-	"github.com/tangelo-labs/go-domainkit/events/dispatcher"
+	"github.com/tangelo-labs/go-domain/events/dispatcher"
 	"google.golang.org/protobuf/proto"
 )
 

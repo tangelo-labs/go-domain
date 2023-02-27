@@ -1,6 +1,6 @@
 package domain
 
-import "github.com/tangelo-labs/go-domainkit/events"
+import "github.com/tangelo-labs/go-domain/events"
 
 // Entity is the base interface for all domain entities.
 type Entity interface {

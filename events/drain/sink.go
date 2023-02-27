@@ -9,7 +9,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/tangelo-labs/go-domainkit/events"
+	"github.com/tangelo-labs/go-domain/events"
 )
 
 var (

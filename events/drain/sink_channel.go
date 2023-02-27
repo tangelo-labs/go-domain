@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/tangelo-labs/go-domainkit/events"
+	"github.com/tangelo-labs/go-domain/events"
 )
 
 // ChannelSink defines a sink that can be listened on. The writer and channel

@@ -3,7 +3,7 @@ package drain
 import (
 	"fmt"
 
-	"github.com/tangelo-labs/go-domainkit/events"
+	"github.com/tangelo-labs/go-domain/events"
 )
 
 // MapperFn defines a function maps an input event into another.

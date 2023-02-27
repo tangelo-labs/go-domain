@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	domain "github.com/tangelo-labs/go-domainkit"
-	"github.com/tangelo-labs/go-domainkit/pagination"
+	"github.com/tangelo-labs/go-domain"
+	"github.com/tangelo-labs/go-domain/pagination"
 )
 
 func TestPagination(t *testing.T) {

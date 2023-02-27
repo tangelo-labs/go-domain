@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	domain "github.com/tangelo-labs/go-domainkit"
+	domain "github.com/tangelo-labs/go-domain"
 )
 
 func TestIDNew(t *testing.T) {

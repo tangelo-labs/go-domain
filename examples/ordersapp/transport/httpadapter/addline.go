@@ -3,7 +3,7 @@ package httpadapter
 import (
 	"net/http"
 
-	"github.com/tangelo-labs/go-domainkit/examples/ordersapp/ucs/addline"
+	"github.com/tangelo-labs/go-domain/examples/ordersapp/ucs/addline"
 )
 
 // AddLineHandler adapts the UC to the HTTP transport.

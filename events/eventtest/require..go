@@ -2,8 +2,8 @@ package eventtest
 
 import (
 	"github.com/stretchr/testify/require"
-	"github.com/tangelo-labs/go-domainkit/events"
-	"github.com/tangelo-labs/go-domainkit/events/eventtest/eventrequire"
+	"github.com/tangelo-labs/go-domain/events"
+	"github.com/tangelo-labs/go-domain/events/eventtest/eventrequire"
 )
 
 // Require is a simple syntactic sugar for "eventrequire" package.

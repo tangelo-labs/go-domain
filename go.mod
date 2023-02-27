@@ -1,4 +1,4 @@
-module github.com/tangelo-labs/go-domainkit
+module github.com/tangelo-labs/go-domain
 
 go 1.20
 

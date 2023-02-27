@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/tangelo-labs/go-domainkit/events"
+	"github.com/tangelo-labs/go-domain/events"
 )
 
 // RecordedLen asserts that the given Recorder object has recorded the
