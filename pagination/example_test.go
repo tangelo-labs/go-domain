@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tangelo-labs/go-domainkit"
+	domain "github.com/tangelo-labs/go-domainkit"
 	"github.com/tangelo-labs/go-domainkit/pagination"
 )
 

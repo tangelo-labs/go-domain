@@ -6,7 +6,7 @@ import (
 
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
-	"github.com/tangelo-labs/go-domainkit"
+	domain "github.com/tangelo-labs/go-domainkit"
 	"github.com/tangelo-labs/go-domainkit/events"
 )
 

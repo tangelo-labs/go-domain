@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/kinesis"
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
 	"github.com/tangelo-labs/go-domainkit/events"
 	"github.com/tangelo-labs/go-domainkit/events/drain"
