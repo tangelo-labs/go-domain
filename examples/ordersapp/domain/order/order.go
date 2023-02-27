@@ -1,6 +1,7 @@
 package order
 
 import (
+	"github.com/tangelo-labs/go-domain"
 	"github.com/tangelo-labs/go-domain/events"
 )
 

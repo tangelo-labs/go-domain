@@ -3,6 +3,7 @@ package get
 import (
 	"context"
 
+	"github.com/tangelo-labs/go-domain"
 	"github.com/tangelo-labs/go-domain/examples/ordersapp/domain/order"
 	"github.com/tangelo-labs/go-domain/examples/ordersapp/ucs/repos"
 )
