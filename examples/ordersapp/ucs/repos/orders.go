@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/tangelo-labs/go-domain"
 	"github.com/tangelo-labs/go-domain/examples/ordersapp/domain/order"
 )
 
