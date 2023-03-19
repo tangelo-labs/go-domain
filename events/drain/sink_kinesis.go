@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 	"github.com/tangelo-labs/go-domain"
-	"github.com/tangelo-labs/go-domain/events"
 )
 
 // KinesisAPI represents a Kinesis client for sending events.
@@ -16,23 +15,23 @@ type KinesisAPI interface {
 	PutRecord(ctx context.Context, params *kinesis.PutRecordInput, optFns ...func(*kinesis.Options)) (*kinesis.PutRecordOutput, error)
 }
 
-type kinesisSink struct {
+type kinesisSink[M any] struct {
 	*baseSink
 	streamName string
 	kinesis    KinesisAPI
-	marshaller Marshaller
+	marshaller Marshaller[M]
 	timeout    time.Duration
-	onError    WriteErrorFn
+	onError    WriteErrorFn[M]
 }
 
 // NewKinesisSink builds a new sink that sends events to a Kinesis Stream.
-func NewKinesisSink(
+func NewKinesisSink[M any](
 	streamName string,
 	api KinesisAPI,
-	marshaller Marshaller,
+	marshaller Marshaller[M],
 	timeout time.Duration,
-	onError WriteErrorFn,
-) (Sink, error) {
+	onError WriteErrorFn[M],
+) (Sink[M], error) {
 	if streamName == "" {
 		return nil, fmt.Errorf("a kinesis stream name must be provided")
 	}
@@ -50,10 +49,10 @@ func NewKinesisSink(
 	}
 
 	if onError == nil {
-		onError = noopWriteError
+		onError = noopWriteError[M]
 	}
 
-	return &kinesisSink{
+	return &kinesisSink[M]{
 		baseSink:   newBaseSink(),
 		streamName: streamName,
 		kinesis:    api,
@@ -63,7 +62,7 @@ func NewKinesisSink(
 	}, nil
 }
 
-func (k *kinesisSink) Write(event events.Event) error {
+func (k *kinesisSink[M]) Write(event M) error {
 	if k.baseSink.IsClosed() {
 		return fmt.Errorf("%w: writer sink could not write event %T", ErrSinkClosed, event)
 	}

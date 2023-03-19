@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tangelo-labs/go-domain/events"
 	"github.com/tangelo-labs/go-domain/events/drain"
 )
 
@@ -18,25 +17,25 @@ type tOrB interface {
 	Logf(format string, args ...interface{})
 }
 
-type testSink struct {
+type testSink[M any] struct {
 	t tOrB
 
-	events   []events.Event
+	events   []M
 	expected int
 
 	closed bool
 	mu     sync.Mutex
 }
 
-func newTestSink(t tOrB, expected int) *testSink {
-	return &testSink{
+func newTestSink[M any](t tOrB, expected int) *testSink[M] {
+	return &testSink[M]{
 		t:        t,
-		events:   make([]events.Event, 0, expected), // pre-allocate so we aren't benching alloc
+		events:   make([]M, 0, expected), // pre-allocate so we aren't benching alloc
 		expected: expected,
 	}
 }
 
-func (ts *testSink) Write(event events.Event) error {
+func (ts *testSink[M]) Write(event M) error {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 
@@ -53,7 +52,7 @@ func (ts *testSink) Write(event events.Event) error {
 	return nil
 }
 
-func (ts *testSink) Close() error {
+func (ts *testSink[M]) Close() error {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 
@@ -70,24 +69,24 @@ func (ts *testSink) Close() error {
 	return nil
 }
 
-type delayedSink struct {
-	drain.Sink
+type delayedSink[M any] struct {
+	drain.Sink[M]
 	delay time.Duration
 }
 
-func (ds *delayedSink) Write(event events.Event) error {
+func (ds *delayedSink[M]) Write(event M) error {
 	time.Sleep(ds.delay)
 
 	return ds.Sink.Write(event)
 }
 
-type flakySink struct {
-	drain.Sink
+type flakySink[M any] struct {
+	drain.Sink[M]
 	rate float64
 	mu   sync.Mutex
 }
 
-func (fs *flakySink) Write(event events.Event) error {
+func (fs *flakySink[M]) Write(event M) error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
@@ -98,18 +97,18 @@ func (fs *flakySink) Write(event events.Event) error {
 	return fs.Sink.Write(event)
 }
 
-type dropperSink struct {
+type dropperSink[M any] struct {
 	err error
 
 	closed bool
 	mu     sync.Mutex
 }
 
-func (d *dropperSink) Write(_ events.Event) error {
+func (d *dropperSink[M]) Write(M) error {
 	return d.err
 }
 
-func (d *dropperSink) Close() error {
+func (d *dropperSink[M]) Close() error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -122,7 +121,7 @@ func (d *dropperSink) Close() error {
 	return nil
 }
 
-func checkClose(t *testing.T, sink drain.Sink) {
+func checkClose[M any](t *testing.T, sink drain.Sink[M]) {
 	if err := sink.Close(); err != nil {
 		t.Fatalf("unexpected error closing: %v", err)
 	}
@@ -132,20 +131,22 @@ func checkClose(t *testing.T, sink drain.Sink) {
 		t.Fatalf("unexpected error on double close: %v", err)
 	}
 
+	var fail M
+
 	// Write after closed should be an error
-	if err := sink.Write("fail"); err == nil {
+	if err := sink.Write(fail); err == nil {
 		t.Fatalf("write after closed did not have an error")
 	} else if !errors.Is(err, drain.ErrSinkClosed) {
 		t.Fatalf("error should be ErrSinkClosed")
 	}
 }
 
-func benchmarkSink(b *testing.B, sink drain.Sink) {
+func benchmarkSink[M any](b *testing.B, sink drain.Sink[M]) {
 	defer func() {
 		require.NoError(b, sink.Close())
 	}()
 
-	var event = "myevent"
+	var event M
 
 	for i := 0; i < b.N; i++ {
 		require.NoError(b, sink.Write(event))

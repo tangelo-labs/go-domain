@@ -32,7 +32,7 @@ func TestNewKinesisSink(t *testing.T) {
 			onErrorCount.Add(1)
 		}
 
-		sink, err := drain.NewKinesisSink(gofakeit.UUID(), kinesisClient, marshaller, time.Second, onError)
+		sink, err := drain.NewKinesisSink[events.Event](gofakeit.UUID(), kinesisClient, marshaller, time.Second, onError)
 		require.NoError(t, err)
 
 		t.Run("WHEN an event fails to be sent", func(t *testing.T) {
@@ -61,7 +61,7 @@ func TestNewKinesisSink(t *testing.T) {
 			onErrorCount.Add(1)
 		}
 
-		sink, err := drain.NewKinesisSink(gofakeit.UUID(), kinesisClient, marshaller, time.Second, onError)
+		sink, err := drain.NewKinesisSink[events.Event](gofakeit.UUID(), kinesisClient, marshaller, time.Second, onError)
 		require.NoError(t, err)
 
 		t.Run("WHEN an event is successfully sent", func(t *testing.T) {

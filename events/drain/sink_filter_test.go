@@ -9,8 +9,8 @@ import (
 
 func TestFilter(t *testing.T) {
 	const nevents = 100
-	ts := newTestSink(t, nevents/2)
-	filter := drain.NewFilter(ts, func(event events.Event) bool {
+	ts := newTestSink[events.Event](t, nevents/2)
+	filter := drain.NewFilter[events.Event](ts, func(event events.Event) bool {
 		i, ok := event.(int)
 
 		return ok && i%2 == 0

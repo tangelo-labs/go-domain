@@ -12,11 +12,11 @@ import (
 func TestBroadcaster(t *testing.T) {
 	const nEvents = 1000
 
-	sinks := make([]drain.Sink, 0)
-	b := drain.NewBroadcaster(noopWriteErrFn)
+	sinks := make([]drain.Sink[events.Event], 0)
+	b := drain.NewBroadcaster[events.Event](noopWriteErrFn)
 
 	for i := 0; i < 10; i++ {
-		sinks = append(sinks, newTestSink(t, nEvents))
+		sinks = append(sinks, newTestSink[events.Event](t, nEvents))
 		require.NoError(t, b.Add(sinks[i]))
 		require.NoError(t, b.Add(sinks[i])) // noop
 	}
@@ -51,11 +51,11 @@ func TestBroadcaster(t *testing.T) {
 		require.NoError(t, b.Add(sinks[i]))
 	}
 
-	checkClose(t, b)
+	checkClose[events.Event](t, b)
 
 	// Iterate through the sinks and check that they all have the expected length.
 	for _, sink := range sinks {
-		ts, ok := sink.(*testSink)
+		ts, ok := sink.(*testSink[events.Event])
 		if !ok {
 			continue
 		}
@@ -95,14 +95,14 @@ func BenchmarkBroadcast10000(b *testing.B) {
 func benchmarkBroadcast(b *testing.B, nsinks int) {
 	b.StopTimer()
 
-	sinks := make([]drain.Sink, 0)
+	sinks := make([]drain.Sink[events.Event], 0)
 
 	for i := 0; i < nsinks; i++ {
-		sinks = append(sinks, newTestSink(b, b.N))
+		sinks = append(sinks, newTestSink[events.Event](b, b.N))
 	}
 
 	b.StartTimer()
-	benchmarkSink(b, drain.NewBroadcaster(noopWriteErrFn, sinks...))
+	benchmarkSink[events.Event](b, drain.NewBroadcaster[events.Event](noopWriteErrFn, sinks...))
 }
 
 func noopWriteErrFn(_ events.Event, _ error) {}

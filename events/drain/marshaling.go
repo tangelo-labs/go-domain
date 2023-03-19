@@ -11,18 +11,18 @@ import (
 )
 
 // Marshaller converts an input event into a byte stream.
-type Marshaller func(event events.Event) ([]byte, error)
+type Marshaller[M any] func(event M) ([]byte, error)
 
 // List of commonly used marshallers.
 var (
 	// JSONMarshaller a simple JSON marshaller function that uses the standard
-	// library `encoding/json` package.
+	// library `encoding/json` package to marshal events.Event messages.
 	JSONMarshaller = func(event events.Event) ([]byte, error) {
 		return json.Marshal(event)
 	}
 
 	// ProtoMarshaller assumes the input event as `proto.Message`, and marshall
-	// using `proto.Marshal()`.
+	// using `proto.Marshal()`
 	ProtoMarshaller = func(event events.Event) ([]byte, error) {
 		if pb, ok := event.(proto.Message); ok {
 			return proto.Marshal(pb)

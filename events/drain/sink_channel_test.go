@@ -14,7 +14,7 @@ import (
 func TestChannel(t *testing.T) {
 	const nEvents = 100
 
-	sink := drain.NewChannel(0)
+	sink := drain.NewChannel[events.Event](0)
 
 	go func() {
 		var wg sync.WaitGroup

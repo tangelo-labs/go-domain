@@ -15,10 +15,10 @@ import (
 func TestQueue(t *testing.T) {
 	const nevents = 1000
 
-	ts := newTestSink(t, nevents)
-	eq := drain.NewQueue(
+	ts := newTestSink[events.Event](t, nevents)
+	eq := drain.NewQueue[events.Event](
 		// delayed sync simulates destination slower than channel comms
-		&delayedSink{
+		&delayedSink[events.Event]{
 			Sink:  ts,
 			delay: time.Millisecond * 1,
 		}, 1, nil)
@@ -58,8 +58,8 @@ func TestQueueDrop(t *testing.T) {
 	const nevents = 10
 
 	cc := atomic.NewInt64(0)
-	eq := drain.NewQueue(
-		&dropperSink{err: errors.New("dropped")},
+	eq := drain.NewQueue[events.Event](
+		&dropperSink[events.Event]{err: errors.New("dropped")},
 		1,
 		func(event events.Event, err error) {
 			cc.Add(1)

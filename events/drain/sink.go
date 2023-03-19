@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"io"
 	"sync"
-
-	"github.com/tangelo-labs/go-domain/events"
 )
 
 var (
@@ -20,24 +18,24 @@ var (
 )
 
 // Writer defines a component where events can be written to.
-type Writer interface {
+type Writer[M any] interface {
 	// Write writes an event. If no error is returned, the caller will
 	// assume that all events have been committed. If an error is received, the
 	// caller may retry sending the event.
-	Write(event events.Event) error
+	Write(event M) error
 }
 
 // Sink accepts and sends events.
-type Sink interface {
-	Writer
+type Sink[M any] interface {
+	Writer[M]
 	io.Closer
 }
 
 // WriteErrorFn defines a function that is invoked each time an event fails
 // to be written to the underlying sink.
-type WriteErrorFn func(event events.Event, err error)
+type WriteErrorFn[M any] func(event M, err error)
 
-func noopWriteError(_ events.Event, _ error) {}
+func noopWriteError[M any](M, error) {}
 
 // baseSink is a trait that can be embedded into other sinks to provide
 // common functionality.

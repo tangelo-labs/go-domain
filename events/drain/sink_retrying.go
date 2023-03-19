@@ -7,8 +7,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/tangelo-labs/go-domain/events"
 )
 
 // retryingSink retries the writing until success or an ErrSinkClosed is
@@ -16,23 +14,23 @@ import (
 // block. Retry is configured with a RetrySinkStrategy. Concurrent calls to a
 // retrying sink are serialized through the sink, meaning that if one is
 // in-flight, another will not proceed.
-type retryingSink struct {
+type retryingSink[M any] struct {
 	*baseSink
-	sink         Sink
-	strategy     RetrySinkStrategy
-	dropHandling WriteErrorFn
+	sink         Sink[M]
+	strategy     RetrySinkStrategy[M]
+	dropHandling WriteErrorFn[M]
 }
 
 // NewRetrying returns a sink that will retry writes to a sink, backing
 // off on failure. Parameters threshold and backoff adjust the behavior of the
 // circuit breaker.
-func NewRetrying(sink Sink, strategy RetrySinkStrategy, dropHandling WriteErrorFn) Sink {
+func NewRetrying[M any](sink Sink[M], strategy RetrySinkStrategy[M], dropHandling WriteErrorFn[M]) Sink[M] {
 	dh := dropHandling
 	if dh == nil {
-		dh = noopWriteError
+		dh = noopWriteError[M]
 	}
 
-	rs := &retryingSink{
+	rs := &retryingSink[M]{
 		baseSink:     newBaseSink(),
 		sink:         sink,
 		strategy:     strategy,
@@ -44,7 +42,7 @@ func NewRetrying(sink Sink, strategy RetrySinkStrategy, dropHandling WriteErrorF
 
 // Write attempts to flush the events to the downstream sink until it succeeds
 // or the sink is closed.
-func (rs *retryingSink) Write(event events.Event) error {
+func (rs *retryingSink[M]) Write(event M) error {
 retry:
 	if rs.baseSink.IsClosed() {
 		return fmt.Errorf("%w: retrying sink could not write event %T", ErrSinkClosed, event)
@@ -84,7 +82,7 @@ retry:
 }
 
 // Close closes the sink and the underlying sink.
-func (rs *retryingSink) Close() error {
+func (rs *retryingSink[M]) Close() error {
 	if errS := rs.sink.Close(); errS != nil {
 		return fmt.Errorf("%w: retrying sink could not close underlying sink", errS)
 	}
@@ -99,26 +97,26 @@ func (rs *retryingSink) Close() error {
 // RetrySinkStrategy defines a strategy for retrying event sink writes.
 //
 // All methods should be goroutine safe.
-type RetrySinkStrategy interface {
+type RetrySinkStrategy[M any] interface {
 	// Proceed is called before every event send. If proceed returns a
 	// positive, non-zero integer, the retryer will back off by the provided
 	// duration.
 	//
 	// An event is provided, by may be ignored.
-	Proceed(event events.Event) time.Duration
+	Proceed(event M) time.Duration
 
 	// Failure reports a failure to the strategy. If this method returns true,
 	// the event should be dropped.
-	Failure(event events.Event, err error) bool
+	Failure(event M, err error) bool
 
 	// Success should be called when an event is sent successfully.
-	Success(event events.Event)
+	Success(event M)
 }
 
 // NewBreakerStrategy returns a breaker that will backoff after the threshold has been
 // tripped. A Breaker is thread safe and may be shared by many goroutines.
-func NewBreakerStrategy(threshold int, backoff time.Duration) RetrySinkStrategy {
-	return &breakerStrategy{
+func NewBreakerStrategy[M any](threshold int, backoff time.Duration) RetrySinkStrategy[M] {
+	return &breakerStrategy[M]{
 		threshold: threshold,
 		backoff:   backoff,
 	}
@@ -127,7 +125,7 @@ func NewBreakerStrategy(threshold int, backoff time.Duration) RetrySinkStrategy 
 // Breaker implements a circuit breaker retry strategy.
 //
 // The current implementation never drops events.
-type breakerStrategy struct {
+type breakerStrategy[M any] struct {
 	threshold int
 	recent    int
 	last      time.Time
@@ -136,7 +134,7 @@ type breakerStrategy struct {
 }
 
 // Proceed checks the failures against the threshold.
-func (b *breakerStrategy) Proceed(event events.Event) time.Duration {
+func (b *breakerStrategy[M]) Proceed(event M) time.Duration {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -148,7 +146,7 @@ func (b *breakerStrategy) Proceed(event events.Event) time.Duration {
 }
 
 // Success resets the breaker.
-func (b *breakerStrategy) Success(event events.Event) {
+func (b *breakerStrategy[M]) Success(event M) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -157,7 +155,7 @@ func (b *breakerStrategy) Success(event events.Event) {
 }
 
 // Failure records the failure and latest failure time.
-func (b *breakerStrategy) Failure(event events.Event, err error) bool {
+func (b *breakerStrategy[M]) Failure(event M, err error) bool {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -194,31 +192,31 @@ var DefaultExponentialBackoffConfig = ExponentialBackoffConfig{
 
 // NewExponentialBackoff returns an exponential backoff strategy with the
 // desired config. If config is nil, the default is returned.
-func NewExponentialBackoff(config ExponentialBackoffConfig) RetrySinkStrategy {
-	return &exponentialBackoffStrategy{
+func NewExponentialBackoff[M any](config ExponentialBackoffConfig) RetrySinkStrategy[M] {
+	return &exponentialBackoffStrategy[M]{
 		config: config,
 	}
 }
 
 // exponentialBackoffStrategy implements random backoff with exponentially increasing
 // bounds as the number consecutive failures increase.
-type exponentialBackoffStrategy struct {
+type exponentialBackoffStrategy[M any] struct {
 	failures uint64 // consecutive failure counter (needs to be 64-bit aligned)
 	config   ExponentialBackoffConfig
 }
 
 // Proceed returns the next randomly bound exponential backoff time.
-func (b *exponentialBackoffStrategy) Proceed(event events.Event) time.Duration {
+func (b *exponentialBackoffStrategy[M]) Proceed(event M) time.Duration {
 	return b.backoff(atomic.LoadUint64(&b.failures))
 }
 
 // Success resets the failures counter.
-func (b *exponentialBackoffStrategy) Success(event events.Event) {
+func (b *exponentialBackoffStrategy[M]) Success(event M) {
 	atomic.StoreUint64(&b.failures, 0)
 }
 
 // Failure increments the failure counter.
-func (b *exponentialBackoffStrategy) Failure(event events.Event, err error) bool {
+func (b *exponentialBackoffStrategy[M]) Failure(event M, err error) bool {
 	atomic.AddUint64(&b.failures, 1)
 
 	return false
@@ -226,7 +224,7 @@ func (b *exponentialBackoffStrategy) Failure(event events.Event, err error) bool
 
 // backoff calculates the amount of time to wait based on the number of
 // consecutive failures.
-func (b *exponentialBackoffStrategy) backoff(failures uint64) time.Duration {
+func (b *exponentialBackoffStrategy[M]) backoff(failures uint64) time.Duration {
 	if failures <= 0 {
 		// proceed normally when there are no failures.
 		return 0

@@ -3,19 +3,17 @@ package drain
 import (
 	"fmt"
 	"io"
-
-	"github.com/tangelo-labs/go-domain/events"
 )
 
-type writerSink struct {
+type writerSink[M any] struct {
 	*baseSink
 	iow        io.Writer
-	marshaller Marshaller
+	marshaller Marshaller[M]
 }
 
 // NewIOWriter builds a sink that writes events into the provided io.Writer.
-func NewIOWriter(iow io.Writer, marshaller Marshaller) Sink {
-	sink := &writerSink{
+func NewIOWriter[M any](iow io.Writer, marshaller Marshaller[M]) Sink[M] {
+	sink := &writerSink[M]{
 		baseSink:   newBaseSink(),
 		iow:        iow,
 		marshaller: marshaller,
@@ -24,7 +22,7 @@ func NewIOWriter(iow io.Writer, marshaller Marshaller) Sink {
 	return sink
 }
 
-func (w *writerSink) Write(event events.Event) error {
+func (w *writerSink[M]) Write(event M) error {
 	if w.baseSink.IsClosed() {
 		return fmt.Errorf("%w: writer sink could not write event %T", ErrSinkClosed, event)
 	}
