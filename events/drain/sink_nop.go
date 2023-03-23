@@ -7,7 +7,7 @@ type nopSink[M any] struct {
 // NewNop builds a sink that does nothing.
 func NewNop[M any]() Sink[M] {
 	return &nopSink[M]{
-		baseSink: newBaseSink(),
+		baseSink: newCloseTrait(),
 	}
 }
 

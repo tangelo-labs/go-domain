@@ -8,7 +8,7 @@ import (
 
 // queue accepts all messages into a queue for asynchronous consumption
 // by a sink. It is unbounded and thread safe but the sink must be reliable or
-// events will be dropped.
+// messages will be dropped.
 type queueSink[M any] struct {
 	*baseSink
 	dst          Sink[M]
@@ -20,8 +20,8 @@ type queueSink[M any] struct {
 }
 
 type queueEnvelope[M any] struct {
-	event  M
-	closed bool
+	message M
+	closed  bool
 }
 
 // NewQueue returns a queue Sink with a given throughput to the provided Sink dst.
@@ -33,7 +33,7 @@ func NewQueue[M any](dst Sink[M], throughput int, dropHandling WriteErrorFn[M]) 
 	}
 
 	eq := &queueSink[M]{
-		baseSink:     newBaseSink(),
+		baseSink:     newCloseTrait(),
 		dst:          dst,
 		list:         list.New(),
 		dropHandling: dh,
@@ -51,17 +51,17 @@ func NewQueue[M any](dst Sink[M], throughput int, dropHandling WriteErrorFn[M]) 
 	return eq
 }
 
-// Write accepts the events into the queue, only failing if the queue has
+// Write accepts the messages into the queue, only failing if the queue has
 // been closed.
-func (eq *queueSink[M]) Write(event M) error {
+func (eq *queueSink[M]) Write(m M) error {
 	eq.mu.Lock()
 	defer eq.mu.Unlock()
 
 	if eq.baseSink.IsClosed() {
-		return fmt.Errorf("%w: writer sink could not write event %T", ErrSinkClosed, event)
+		return fmt.Errorf("%w: writer sink could not write message %T", ErrSinkClosed, m)
 	}
 
-	eq.list.PushBack(queueEnvelope[M]{event: event})
+	eq.list.PushBack(queueEnvelope[M]{message: m})
 	eq.cond.Signal() // signal waiters
 
 	return nil
@@ -96,7 +96,7 @@ func (eq *queueSink[M]) Close() error {
 	return nil
 }
 
-// run is the main goroutine to flush events to the target sink.
+// run is the main goroutine to flush messages to the target sink.
 func (eq *queueSink[M]) run() {
 	for {
 		envelope := eq.next()
@@ -104,8 +104,8 @@ func (eq *queueSink[M]) run() {
 			return // queueClosed block means event queue is closed.
 		}
 
-		if err := eq.dst.Write(envelope.event); err != nil {
-			eq.dropHandling(envelope.event, err)
+		if err := eq.dst.Write(envelope.message); err != nil {
+			eq.dropHandling(envelope.message, err)
 		}
 	}
 }
@@ -131,7 +131,7 @@ func (eq *queueSink[M]) next() queueEnvelope[M] {
 	block, ok := front.Value.(queueEnvelope[M])
 
 	if !ok {
-		fmt.Printf("queue sink fatal error, not an event interface in the queue\n")
+		fmt.Printf("queue sink fatal error, not a queue envelope interface in the queue\n")
 	}
 
 	eq.list.Remove(front)

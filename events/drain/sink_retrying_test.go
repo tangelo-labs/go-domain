@@ -22,10 +22,11 @@ func TestRetryingSinkExponentialBackoff(t *testing.T) {
 }
 
 func testRetryingSink[M any](t *testing.T, strategy drain.RetrySinkStrategy[M]) {
-	const nevents = 100
-	ts := newTestSink[M](t, nevents)
+	const nm = 100
 
-	// Make a sync that fails most of the time, ensuring that all the events
+	ts := newTestSink[M](t, nm)
+
+	// Make a sync that fails most of the time, ensuring that all the messages
 	// make it through.
 	flaky := &flakySink[M]{
 		rate: 1.0, // start out always failing.
@@ -36,8 +37,8 @@ func testRetryingSink[M any](t *testing.T, strategy drain.RetrySinkStrategy[M]) 
 
 	var wg sync.WaitGroup
 
-	for i := 1; i <= nevents; i++ {
-		var event M
+	for i := 1; i <= nm; i++ {
+		var m M
 
 		// Above 50, set the failure rate lower
 		if i > 50 {
@@ -48,13 +49,13 @@ func testRetryingSink[M any](t *testing.T, strategy drain.RetrySinkStrategy[M]) 
 
 		wg.Add(1)
 
-		go func(event M) {
+		go func(m M) {
 			defer wg.Done()
 
-			if err := s.Write(event); err != nil {
-				t.Errorf("error writing event: %v", err)
+			if err := s.Write(m); err != nil {
+				t.Errorf("error writing message: %v", err)
 			}
-		}(event)
+		}(m)
 	}
 
 	wg.Wait()
@@ -74,7 +75,7 @@ func TestExponentialBackoff(t *testing.T) {
 
 	for i := 1; i <= 10; i++ {
 		if strategy.Failure(nil, nil) {
-			t.Errorf("no facilities for dropping events in ExponentialBackoffStrategy")
+			t.Errorf("no facilities for dropping messages in ExponentialBackoffStrategy")
 		}
 
 		for j := 0; j < 1000; j++ {

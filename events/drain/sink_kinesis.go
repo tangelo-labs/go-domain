@@ -10,7 +10,7 @@ import (
 	"github.com/tangelo-labs/go-domain"
 )
 
-// KinesisAPI represents a Kinesis client for sending events.
+// KinesisAPI represents a Kinesis client for sending messages.
 type KinesisAPI interface {
 	PutRecord(ctx context.Context, params *kinesis.PutRecordInput, optFns ...func(*kinesis.Options)) (*kinesis.PutRecordOutput, error)
 }
@@ -24,7 +24,7 @@ type kinesisSink[M any] struct {
 	onError    WriteErrorFn[M]
 }
 
-// NewKinesisSink builds a new sink that sends events to a Kinesis Stream.
+// NewKinesisSink builds a new sink that sends messages to a Kinesis Stream.
 func NewKinesisSink[M any](
 	streamName string,
 	api KinesisAPI,
@@ -53,7 +53,7 @@ func NewKinesisSink[M any](
 	}
 
 	return &kinesisSink[M]{
-		baseSink:   newBaseSink(),
+		baseSink:   newCloseTrait(),
 		streamName: streamName,
 		kinesis:    api,
 		marshaller: marshaller,
@@ -62,15 +62,15 @@ func NewKinesisSink[M any](
 	}, nil
 }
 
-func (k *kinesisSink[M]) Write(event M) error {
+func (k *kinesisSink[M]) Write(message M) error {
 	if k.baseSink.IsClosed() {
-		return fmt.Errorf("%w: writer sink could not write event %T", ErrSinkClosed, event)
+		return fmt.Errorf("%w: writer sink could not write message %T", ErrSinkClosed, message)
 	}
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), k.timeout)
 	defer cancelFunc()
 
-	data, err := k.marshaller(event)
+	data, err := k.marshaller(message)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (k *kinesisSink[M]) Write(event M) error {
 		Data:         data,
 	}); err != nil {
 		if k.onError != nil {
-			k.onError(event, err)
+			k.onError(message, err)
 		}
 
 		return err

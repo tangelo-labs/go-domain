@@ -15,7 +15,7 @@ type ChannelSink[M any] interface {
 	// Done returns a channel that will always proceed once the sink is closed.
 	Done() <-chan struct{}
 
-	// Wait returns a channel that unblocks when a new Event arrives.
+	// Wait returns a channel that unblocks when a new message arrives.
 	// Must be called in a separate goroutine from the writer.
 	Wait() <-chan M
 }
@@ -30,7 +30,7 @@ type channelSink[M any] struct {
 // unbuffered.
 func NewChannel[M any](buffer int) ChannelSink[M] {
 	return &channelSink[M]{
-		baseSink: newBaseSink(),
+		baseSink: newCloseTrait(),
 		c:        make(chan M, buffer),
 	}
 }
@@ -39,17 +39,17 @@ func (ch *channelSink[M]) Done() <-chan struct{} {
 	return ch.Closed()
 }
 
-// Write the event to the channel. Must be called in a separate goroutine from
+// Write the message to the channel. Must be called in a separate goroutine from
 // the listener.
-func (ch *channelSink[M]) Write(event M) error {
+func (ch *channelSink[M]) Write(message M) error {
 	if ch.baseSink.IsClosed() {
-		return fmt.Errorf("%w: channel sink could not write event %T", ErrSinkClosed, event)
+		return fmt.Errorf("%w: channel sink could not write message %T", ErrSinkClosed, message)
 	}
 
 	select {
 	case <-ch.Closed():
-		return fmt.Errorf("%w: channel sink could not write event %T", ErrSinkClosed, event)
-	case ch.c <- event:
+		return fmt.Errorf("%w: channel sink could not write message %T", ErrSinkClosed, message)
+	case ch.c <- message:
 		return nil
 	}
 }

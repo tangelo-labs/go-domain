@@ -6,8 +6,8 @@ import (
 	"sync"
 )
 
-// BroadcasterSink sends events to multiple, reliable Sinks. The goal of this
-// component is to dispatch events to configured endpoints. Reliability can be
+// BroadcasterSink sends messages to multiple, reliable Sinks. The goal of this
+// component is to dispatch messages to configured endpoints. Reliability can be
 // provided by wrapping incoming sinks.
 type BroadcasterSink[M any] interface {
 	Sink[M]
@@ -23,10 +23,10 @@ type BroadcasterSink[M any] interface {
 
 type broadcaster[M any] struct {
 	*baseSink
-	sinks   []Sink[M]
-	events  chan M
-	adds    chan bcConfigureRequest[M]
-	removes chan bcConfigureRequest[M]
+	sinks    []Sink[M]
+	messages chan M
+	adds     chan bcConfigureRequest[M]
+	removes  chan bcConfigureRequest[M]
 
 	wErrHandler WriteErrorFn[M]
 	closeOnce   sync.Once
@@ -43,9 +43,9 @@ type bcConfigureRequest[M any] struct {
 // its own. Use of QueueSink and RetryingSink should be used here.
 func NewBroadcaster[M any](wErrHandler WriteErrorFn[M], to ...Sink[M]) BroadcasterSink[M] {
 	b := &broadcaster[M]{
-		baseSink:    newBaseSink(),
+		baseSink:    newCloseTrait(),
 		sinks:       to,
-		events:      make(chan M),
+		messages:    make(chan M),
 		adds:        make(chan bcConfigureRequest[M]),
 		removes:     make(chan bcConfigureRequest[M]),
 		wErrHandler: wErrHandler,
@@ -57,18 +57,18 @@ func NewBroadcaster[M any](wErrHandler WriteErrorFn[M], to ...Sink[M]) Broadcast
 	return b
 }
 
-// Write accepts an event to be dispatched to all sinks. This method will never
+// Write accepts a message to be dispatched to all sinks. This method will never
 // fail and should never block (hopefully!). The caller cedes the memory to the
 // broadcaster and should not modify it after calling write.
-func (b *broadcaster[M]) Write(event M) error {
+func (b *broadcaster[M]) Write(message M) error {
 	if b.baseSink.IsClosed() {
-		return fmt.Errorf("%w: broadcaster sink could not write event %T", ErrSinkClosed, event)
+		return fmt.Errorf("%w: broadcaster sink could not write message %T", ErrSinkClosed, message)
 	}
 
 	select {
 	case <-b.Closed():
-		return fmt.Errorf("%w: broadcaster sink failed write event %T", ErrSinkClosed, event)
-	case b.events <- event:
+		return fmt.Errorf("%w: broadcaster sink failed write message %T", ErrSinkClosed, message)
+	case b.messages <- message:
 	}
 
 	return nil
@@ -102,7 +102,7 @@ func (b *broadcaster[M]) Close() error {
 }
 
 // run is the main broadcast loop, started when the broadcaster is created.
-// Under normal conditions, it waits for events on the event channel. After
+// Under normal conditions, it waits for messages on the message channel. After
 // Close is called, this goroutine will exit.
 func (b *broadcaster[M]) run() {
 	remove := func(target Sink[M]) {
@@ -119,9 +119,9 @@ func (b *broadcaster[M]) run() {
 		select {
 		case <-b.Closed():
 			return
-		case event := <-b.events:
+		case m := <-b.messages:
 			for _, sink := range b.sinks {
-				if err := sink.Write(event); err != nil {
+				if err := sink.Write(m); err != nil {
 					if errors.Is(err, ErrSinkClosed) {
 						// remove closed sinks
 						remove(sink)
@@ -129,7 +129,7 @@ func (b *broadcaster[M]) run() {
 						continue
 					}
 
-					b.wErrHandler(event, err)
+					b.wErrHandler(m, err)
 				}
 			}
 		case request := <-b.adds:

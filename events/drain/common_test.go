@@ -20,7 +20,7 @@ type tOrB interface {
 type testSink[M any] struct {
 	t tOrB
 
-	events   []M
+	messages []M
 	expected int
 
 	closed bool
@@ -30,12 +30,12 @@ type testSink[M any] struct {
 func newTestSink[M any](t tOrB, expected int) *testSink[M] {
 	return &testSink[M]{
 		t:        t,
-		events:   make([]M, 0, expected), // pre-allocate so we aren't benching alloc
+		messages: make([]M, 0, expected), // pre-allocate so we aren't benching alloc
 		expected: expected,
 	}
 }
 
-func (ts *testSink[M]) Write(event M) error {
+func (ts *testSink[M]) Write(message M) error {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 
@@ -43,10 +43,10 @@ func (ts *testSink[M]) Write(event M) error {
 		return drain.ErrSinkClosed
 	}
 
-	ts.events = append(ts.events, event)
+	ts.messages = append(ts.messages, message)
 
-	if len(ts.events) > ts.expected {
-		ts.t.Fatalf("len(ts.events) == %v, expected %v", len(ts.events), ts.expected)
+	if len(ts.messages) > ts.expected {
+		ts.t.Fatalf("len(ts.messages) == %v, expected %v", len(ts.messages), ts.expected)
 	}
 
 	return nil
@@ -62,8 +62,8 @@ func (ts *testSink[M]) Close() error {
 
 	ts.closed = true
 
-	if len(ts.events) != ts.expected {
-		ts.t.Fatalf("len(ts.events) == %v, expected %v", len(ts.events), ts.expected)
+	if len(ts.messages) != ts.expected {
+		ts.t.Fatalf("len(ts.messages) == %v, expected %v", len(ts.messages), ts.expected)
 	}
 
 	return nil
@@ -74,10 +74,10 @@ type delayedSink[M any] struct {
 	delay time.Duration
 }
 
-func (ds *delayedSink[M]) Write(event M) error {
+func (ds *delayedSink[M]) Write(message M) error {
 	time.Sleep(ds.delay)
 
-	return ds.Sink.Write(event)
+	return ds.Sink.Write(message)
 }
 
 type flakySink[M any] struct {
@@ -86,15 +86,15 @@ type flakySink[M any] struct {
 	mu   sync.Mutex
 }
 
-func (fs *flakySink[M]) Write(event M) error {
+func (fs *flakySink[M]) Write(message M) error {
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 
 	if rand.Float64() < fs.rate {
-		return fmt.Errorf("error writing event: %v", event)
+		return fmt.Errorf("error writing message: %v", message)
 	}
 
-	return fs.Sink.Write(event)
+	return fs.Sink.Write(message)
 }
 
 type dropperSink[M any] struct {
@@ -146,9 +146,9 @@ func benchmarkSink[M any](b *testing.B, sink drain.Sink[M]) {
 		require.NoError(b, sink.Close())
 	}()
 
-	var event M
+	var m M
 
 	for i := 0; i < b.N; i++ {
-		require.NoError(b, sink.Write(event))
+		require.NoError(b, sink.Write(m))
 	}
 }

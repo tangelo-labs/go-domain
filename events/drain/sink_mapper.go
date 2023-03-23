@@ -5,19 +5,19 @@ import (
 )
 
 // MapperFn defines a function maps an input event into another.
-type MapperFn[M any] func(event M) (M, error)
+type MapperFn[M any] func(M) (M, error)
 
-// mapperSink provides a sink that maps events into other events.
+// mapperSink provides a sink that maps messages into other messages.
 type mapperSink[M any] struct {
 	*baseSink
 	dst    Sink[M]
 	mapper MapperFn[M]
 }
 
-// NewMapper builds sink that passes to dst mapped events.
+// NewMapper builds sink that passes to dst mapped messages.
 func NewMapper[M any](dst Sink[M], mapper MapperFn[M]) Sink[M] {
 	sink := &mapperSink[M]{
-		baseSink: newBaseSink(),
+		baseSink: newCloseTrait(),
 		mapper:   mapper,
 		dst:      dst,
 	}
@@ -25,18 +25,18 @@ func NewMapper[M any](dst Sink[M], mapper MapperFn[M]) Sink[M] {
 	return sink
 }
 
-func (ms *mapperSink[M]) Write(event M) error {
+func (ms *mapperSink[M]) Write(message M) error {
 	if ms.baseSink.IsClosed() {
-		return fmt.Errorf("%w: mapper sink could not write event %T", ErrSinkClosed, event)
+		return fmt.Errorf("%w: mapper sink could not write message %T", ErrSinkClosed, message)
 	}
 
-	ev, errM := ms.mapper(event)
+	ev, errM := ms.mapper(message)
 	if errM != nil {
-		return fmt.Errorf("%w: mapper sink could not map event %T", errM, event)
+		return fmt.Errorf("%w: mapper sink could not map message %T", errM, message)
 	}
 
 	if errD := ms.dst.Write(ev); errD != nil {
-		return fmt.Errorf("%w: mapper sink could not write event %T in underlying sink", errD, event)
+		return fmt.Errorf("%w: mapper sink could not write message %T in underlying sink", errD, message)
 	}
 
 	return nil
