@@ -22,7 +22,7 @@ var (
 	}
 
 	// ProtoMarshaller assumes the input message as `proto.Message`, and marshall
-	// using `proto.Marshal()`
+	// using `proto.Marshal()`.
 	ProtoMarshaller = func(m events.Event) ([]byte, error) {
 		if pb, ok := m.(proto.Message); ok {
 			return proto.Marshal(pb)
