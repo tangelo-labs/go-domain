@@ -21,22 +21,22 @@ func TestNewKinesisSink(t *testing.T) {
 		}
 
 		marshallerCallsCount := atomic.NewInt64(0)
-		marshaller := func(event events.Event) ([]byte, error) {
+		marshaller := func(message events.Event) ([]byte, error) {
 			marshallerCallsCount.Add(1)
 
-			return drain.JSONMarshaller(event)
+			return drain.JSONMarshaller(message)
 		}
 
 		onErrorCount := atomic.NewInt64(0)
-		onError := func(event events.Event, err error) {
+		onError := func(message events.Event, err error) {
 			onErrorCount.Add(1)
 		}
 
-		sink, err := drain.NewKinesisSink(gofakeit.UUID(), kinesisClient, marshaller, time.Second, onError)
+		sink, err := drain.NewKinesisSink[events.Event](gofakeit.UUID(), kinesisClient, marshaller, time.Second, onError)
 		require.NoError(t, err)
 
-		t.Run("WHEN an event fails to be sent", func(t *testing.T) {
-			err = sink.Write(fakeEvent{ID: gofakeit.UUID()})
+		t.Run("WHEN a message fails to be sent", func(t *testing.T) {
+			err = sink.Write(fakeMessage{ID: gofakeit.UUID()})
 			require.ErrorIs(t, err, kinesisClient.err)
 
 			t.Run("THEN marshaller is called AND error callback is invoked", func(t *testing.T) {
@@ -50,22 +50,22 @@ func TestNewKinesisSink(t *testing.T) {
 		kinesisClient := &mockKinesisClient{}
 
 		marshallerCallsCount := atomic.NewInt64(0)
-		marshaller := func(event events.Event) ([]byte, error) {
+		marshaller := func(message events.Event) ([]byte, error) {
 			marshallerCallsCount.Add(1)
 
-			return drain.JSONMarshaller(event)
+			return drain.JSONMarshaller(message)
 		}
 
 		onErrorCount := atomic.NewInt64(0)
-		onError := func(event events.Event, err error) {
+		onError := func(message events.Event, err error) {
 			onErrorCount.Add(1)
 		}
 
-		sink, err := drain.NewKinesisSink(gofakeit.UUID(), kinesisClient, marshaller, time.Second, onError)
+		sink, err := drain.NewKinesisSink[events.Event](gofakeit.UUID(), kinesisClient, marshaller, time.Second, onError)
 		require.NoError(t, err)
 
-		t.Run("WHEN an event is successfully sent", func(t *testing.T) {
-			require.NoError(t, sink.Write(fakeEvent{ID: gofakeit.UUID()}))
+		t.Run("WHEN a message is successfully sent", func(t *testing.T) {
+			require.NoError(t, sink.Write(fakeMessage{ID: gofakeit.UUID()}))
 
 			t.Run("THEN marshaller is called AND error callback is not invoked", func(t *testing.T) {
 				require.EqualValues(t, 1, marshallerCallsCount.Load())
@@ -75,7 +75,7 @@ func TestNewKinesisSink(t *testing.T) {
 	})
 }
 
-type fakeEvent struct {
+type fakeMessage struct {
 	ID string
 }
 

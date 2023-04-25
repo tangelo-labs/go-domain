@@ -10,29 +10,29 @@ import (
 )
 
 func TestBroadcaster(t *testing.T) {
-	const nEvents = 1000
+	const nm = 1000
 
-	sinks := make([]drain.Sink, 0)
-	b := drain.NewBroadcaster(noopWriteErrFn)
+	sinks := make([]drain.Sink[events.Event], 0)
+	b := drain.NewBroadcaster[events.Event](noopWriteErrFn)
 
 	for i := 0; i < 10; i++ {
-		sinks = append(sinks, newTestSink(t, nEvents))
+		sinks = append(sinks, newTestSink[events.Event](t, nm))
 		require.NoError(t, b.Add(sinks[i]))
 		require.NoError(t, b.Add(sinks[i])) // noop
 	}
 
 	var wg sync.WaitGroup
 
-	for i := 1; i <= nEvents; i++ {
+	for i := 1; i <= nm; i++ {
 		wg.Add(1)
 
-		go func(event events.Event) {
-			if err := b.Write(event); err != nil {
-				t.Errorf("error writing event %v: %v", event, err)
+		go func(m events.Event) {
+			if err := b.Write(m); err != nil {
+				t.Errorf("error writing message %v: %v", m, err)
 			}
 
 			wg.Done()
-		}("event")
+		}("message")
 	}
 
 	wg.Wait() // Wait until writes complete
@@ -51,20 +51,20 @@ func TestBroadcaster(t *testing.T) {
 		require.NoError(t, b.Add(sinks[i]))
 	}
 
-	checkClose(t, b)
+	checkClose[events.Event](t, b)
 
 	// Iterate through the sinks and check that they all have the expected length.
 	for _, sink := range sinks {
-		ts, ok := sink.(*testSink)
+		ts, ok := sink.(*testSink[events.Event])
 		if !ok {
 			continue
 		}
 
 		ts.mu.Lock()
 
-		if len(ts.events) != nEvents {
+		if len(ts.messages) != nm {
 			ts.mu.Unlock()
-			t.Fatalf("not all events ended up in testsink: len(testSink) == %d, not %d", len(ts.events), nEvents)
+			t.Fatalf("not all messages ended up in testsink: len(testSink) == %d, not %d", len(ts.messages), nm)
 		}
 
 		if !ts.closed {
@@ -95,14 +95,14 @@ func BenchmarkBroadcast10000(b *testing.B) {
 func benchmarkBroadcast(b *testing.B, nsinks int) {
 	b.StopTimer()
 
-	sinks := make([]drain.Sink, 0)
+	sinks := make([]drain.Sink[events.Event], 0)
 
 	for i := 0; i < nsinks; i++ {
-		sinks = append(sinks, newTestSink(b, b.N))
+		sinks = append(sinks, newTestSink[events.Event](b, b.N))
 	}
 
 	b.StartTimer()
-	benchmarkSink(b, drain.NewBroadcaster(noopWriteErrFn, sinks...))
+	benchmarkSink[events.Event](b, drain.NewBroadcaster[events.Event](noopWriteErrFn, sinks...))
 }
 
 func noopWriteErrFn(_ events.Event, _ error) {}

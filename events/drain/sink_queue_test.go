@@ -13,30 +13,30 @@ import (
 )
 
 func TestQueue(t *testing.T) {
-	const nevents = 1000
+	const nm = 1000
 
-	ts := newTestSink(t, nevents)
-	eq := drain.NewQueue(
-		// delayed sync simulates destination slower than channel comms
-		&delayedSink{
+	ts := newTestSink[events.Event](t, nm)
+	eq := drain.NewQueue[events.Event](
+		// delayed sync simulates destination slower than channel.
+		&delayedSink[events.Event]{
 			Sink:  ts,
 			delay: time.Millisecond * 1,
 		}, 1, nil)
 
-	time.Sleep(10 * time.Millisecond) // let's queue settle to wait conidition.
+	time.Sleep(10 * time.Millisecond) // let's queue settle to wait condition.
 
 	var wg sync.WaitGroup
 
-	for i := 1; i <= nevents; i++ {
+	for i := 1; i <= nm; i++ {
 		wg.Add(1)
 
-		go func(event events.Event) {
+		go func(message events.Event) {
 			defer wg.Done()
 
-			if err := eq.Write(event); err != nil {
-				t.Errorf("error writing event: %v", err)
+			if err := eq.Write(message); err != nil {
+				t.Errorf("error writing message: %v", err)
 			}
-		}("event-" + fmt.Sprint(i))
+		}("message-" + fmt.Sprint(i))
 	}
 
 	wg.Wait()
@@ -45,8 +45,8 @@ func TestQueue(t *testing.T) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 
-	if len(ts.events) != nevents {
-		t.Fatalf("events did not make it to the sink: %d != %d", len(ts.events), 1000)
+	if len(ts.messages) != nm {
+		t.Fatalf("messages did not make it to the sink: %d != %d", len(ts.messages), 1000)
 	}
 
 	if !ts.closed {
@@ -55,13 +55,13 @@ func TestQueue(t *testing.T) {
 }
 
 func TestQueueDrop(t *testing.T) {
-	const nevents = 10
+	const nm = 10
 
 	cc := atomic.NewInt64(0)
-	eq := drain.NewQueue(
-		&dropperSink{err: errors.New("dropped")},
+	eq := drain.NewQueue[events.Event](
+		&dropperSink[events.Event]{err: errors.New("dropped")},
 		1,
-		func(event events.Event, err error) {
+		func(m events.Event, err error) {
 			cc.Add(1)
 		},
 	)
@@ -70,16 +70,16 @@ func TestQueueDrop(t *testing.T) {
 
 	var wg sync.WaitGroup
 
-	for i := 1; i <= nevents; i++ {
+	for i := 1; i <= nm; i++ {
 		wg.Add(1)
 
-		go func(event events.Event) {
+		go func(m events.Event) {
 			defer wg.Done()
 
-			if err := eq.Write(event); err != nil {
-				t.Errorf("error writing event: %v", err)
+			if err := eq.Write(m); err != nil {
+				t.Errorf("error writing message: %v", err)
 			}
-		}("event-" + fmt.Sprint(i))
+		}("message-" + fmt.Sprint(i))
 	}
 
 	wg.Wait()

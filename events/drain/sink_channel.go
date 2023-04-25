@@ -3,65 +3,63 @@ package drain
 import (
 	"fmt"
 	"sync"
-
-	"github.com/tangelo-labs/go-domain/events"
 )
 
 // ChannelSink defines a sink that can be listened on. The writer and channel
 // listener must operate in separate goroutines.
 //
 // Consumers should listen on Channel.C until Closed is closed.
-type ChannelSink interface {
-	Sink
+type ChannelSink[M any] interface {
+	Sink[M]
 
 	// Done returns a channel that will always proceed once the sink is closed.
 	Done() <-chan struct{}
 
-	// Wait returns a channel that unblocks when a new Event arrives.
+	// Wait returns a channel that unblocks when a new message arrives.
 	// Must be called in a separate goroutine from the writer.
-	Wait() <-chan events.Event
+	Wait() <-chan M
 }
 
-type channelSink struct {
+type channelSink[M any] struct {
 	*baseSink
-	c         chan events.Event
+	c         chan M
 	closeOnce sync.Once
 }
 
 // NewChannel returns a channel. If buffer is zero, the channel is
 // unbuffered.
-func NewChannel(buffer int) ChannelSink {
-	return &channelSink{
-		baseSink: newBaseSink(),
-		c:        make(chan events.Event, buffer),
+func NewChannel[M any](buffer int) ChannelSink[M] {
+	return &channelSink[M]{
+		baseSink: newCloseTrait(),
+		c:        make(chan M, buffer),
 	}
 }
 
-func (ch *channelSink) Done() <-chan struct{} {
+func (ch *channelSink[M]) Done() <-chan struct{} {
 	return ch.Closed()
 }
 
-// Write the event to the channel. Must be called in a separate goroutine from
+// Write the message to the channel. Must be called in a separate goroutine from
 // the listener.
-func (ch *channelSink) Write(event events.Event) error {
+func (ch *channelSink[M]) Write(message M) error {
 	if ch.baseSink.IsClosed() {
-		return fmt.Errorf("%w: channel sink could not write event %T", ErrSinkClosed, event)
+		return fmt.Errorf("%w: channel sink could not write message %T", ErrSinkClosed, message)
 	}
 
 	select {
 	case <-ch.Closed():
-		return fmt.Errorf("%w: channel sink could not write event %T", ErrSinkClosed, event)
-	case ch.c <- event:
+		return fmt.Errorf("%w: channel sink could not write message %T", ErrSinkClosed, message)
+	case ch.c <- message:
 		return nil
 	}
 }
 
-func (ch *channelSink) Wait() <-chan events.Event {
+func (ch *channelSink[M]) Wait() <-chan M {
 	return ch.c
 }
 
 // Close the channel sink.
-func (ch *channelSink) Close() error {
+func (ch *channelSink[M]) Close() error {
 	if errB := ch.baseSink.Close(); errB != nil {
 		return fmt.Errorf("%w: channel sink could not close", errB)
 	}

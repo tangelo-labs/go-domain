@@ -4,37 +4,38 @@ import (
 	"container/list"
 	"fmt"
 	"sync"
-
-	"github.com/tangelo-labs/go-domain/events"
 )
-
-const queueClosed = ":closed:"
 
 // queue accepts all messages into a queue for asynchronous consumption
 // by a sink. It is unbounded and thread safe but the sink must be reliable or
-// events will be dropped.
-type queueSink struct {
+// messages will be dropped.
+type queueSink[M any] struct {
 	*baseSink
-	dst          Sink
-	events       *list.List
+	dst          Sink[M]
+	list         *list.List
 	cond         *sync.Cond
 	mu           sync.Mutex
 	closing      bool
-	dropHandling func(dropped events.Event, err error)
+	dropHandling WriteErrorFn[M]
+}
+
+type queueEnvelope[M any] struct {
+	message M
+	closed  bool
 }
 
 // NewQueue returns a queue Sink with a given throughput to the provided Sink dst.
 // nil dropHandling will set a noop handler.
-func NewQueue(dst Sink, throughput int, dropHandling WriteErrorFn) Sink {
+func NewQueue[M any](dst Sink[M], throughput int, dropHandling WriteErrorFn[M]) Sink[M] {
 	dh := dropHandling
 	if dh == nil {
-		dh = noopWriteError
+		dh = noopWriteError[M]
 	}
 
-	eq := &queueSink{
-		baseSink:     newBaseSink(),
+	eq := &queueSink[M]{
+		baseSink:     newCloseTrait(),
 		dst:          dst,
-		events:       list.New(),
+		list:         list.New(),
 		dropHandling: dh,
 	}
 
@@ -50,24 +51,24 @@ func NewQueue(dst Sink, throughput int, dropHandling WriteErrorFn) Sink {
 	return eq
 }
 
-// Write accepts the events into the queue, only failing if the queue has
+// Write accepts the messages into the queue, only failing if the queue has
 // been closed.
-func (eq *queueSink) Write(event events.Event) error {
+func (eq *queueSink[M]) Write(m M) error {
 	eq.mu.Lock()
 	defer eq.mu.Unlock()
 
 	if eq.baseSink.IsClosed() {
-		return fmt.Errorf("%w: writer sink could not write event %T", ErrSinkClosed, event)
+		return fmt.Errorf("%w: writer sink could not write message %T", ErrSinkClosed, m)
 	}
 
-	eq.events.PushBack(event)
+	eq.list.PushBack(queueEnvelope[M]{message: m})
 	eq.cond.Signal() // signal waiters
 
 	return nil
 }
 
 // Close shutdown the event queue, flushing.
-func (eq *queueSink) Close() error {
+func (eq *queueSink[M]) Close() error {
 	eq.mu.Lock()
 	defer eq.mu.Unlock()
 
@@ -95,17 +96,16 @@ func (eq *queueSink) Close() error {
 	return nil
 }
 
-// run is the main goroutine to flush events to the target sink.
-func (eq *queueSink) run() {
+// run is the main goroutine to flush messages to the target sink.
+func (eq *queueSink[M]) run() {
 	for {
-		event := eq.next()
-
-		if event == queueClosed {
+		envelope := eq.next()
+		if envelope.closed {
 			return // queueClosed block means event queue is closed.
 		}
 
-		if err := eq.dst.Write(event); err != nil {
-			eq.dropHandling(event, err)
+		if err := eq.dst.Write(envelope.message); err != nil {
+			eq.dropHandling(envelope.message, err)
 		}
 	}
 }
@@ -113,28 +113,28 @@ func (eq *queueSink) run() {
 // next encompasses the critical section of the run loop. When the queue is
 // empty, it will block on the condition. If new data arrives, it will wake
 // and return a block. When closed, queueClosed constant will be returned.
-func (eq *queueSink) next() events.Event {
+func (eq *queueSink[M]) next() queueEnvelope[M] {
 	eq.mu.Lock()
 	defer eq.mu.Unlock()
 
-	for eq.events.Len() < 1 {
+	for eq.list.Len() < 1 {
 		if eq.closing || eq.IsClosed() {
 			eq.cond.Broadcast()
 
-			return queueClosed
+			return queueEnvelope[M]{closed: true}
 		}
 
 		eq.cond.Wait()
 	}
 
-	front := eq.events.Front()
-	block, ok := front.Value.(events.Event)
+	front := eq.list.Front()
+	block, ok := front.Value.(queueEnvelope[M])
 
 	if !ok {
-		fmt.Printf("queue sink fatal error, not an event interface in the queue\n")
+		fmt.Printf("queue sink fatal error, not a queue envelope interface in the queue\n")
 	}
 
-	eq.events.Remove(front)
+	eq.list.Remove(front)
 
 	return block
 }
