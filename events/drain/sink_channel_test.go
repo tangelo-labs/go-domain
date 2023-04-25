@@ -12,32 +12,32 @@ import (
 )
 
 func TestChannel(t *testing.T) {
-	const nEvents = 100
+	const nm = 100
 
-	sink := drain.NewChannel(0)
+	sink := drain.NewChannel[events.Event](0)
 
 	go func() {
 		var wg sync.WaitGroup
 
-		for i := 1; i <= nEvents; i++ {
-			event := "event-" + fmt.Sprint(i)
+		for i := 1; i <= nm; i++ {
+			m := "msg-" + fmt.Sprint(i)
 
 			wg.Add(1)
 
-			go func(event events.Event) {
+			go func(m events.Event) {
 				defer wg.Done()
 
-				if err := sink.Write(event); err != nil {
-					t.Errorf("error writing event: %v", err)
+				if err := sink.Write(m); err != nil {
+					t.Errorf("error writing message: %v", err)
 				}
-			}(event)
+			}(m)
 		}
 
 		wg.Wait()
 		require.NoError(t, sink.Close())
 
-		// now send another bunch of events and ensure we stay closed
-		for i := 1; i <= nEvents; i++ {
+		// now send another bunch of messages and ensure we stay closed
+		for i := 1; i <= nm; i++ {
 			if err := sink.Write(i); !errors.Is(err, drain.ErrSinkClosed) {
 				t.Errorf("unexpected error: %v != %v", err, drain.ErrSinkClosed)
 			}
@@ -62,7 +62,7 @@ loop:
 		t.Fatalf("done should be a closed channel")
 	}
 
-	if received != nEvents {
-		t.Fatalf("events did not make it through sink: %v != %v", received, nEvents)
+	if received != nm {
+		t.Fatalf("messages did not make it through sink: %v != %v", received, nm)
 	}
 }

@@ -1,18 +1,16 @@
 package drain
 
-import "github.com/tangelo-labs/go-domain/events"
-
-type nopSink struct {
+type nopSink[M any] struct {
 	*baseSink
 }
 
 // NewNop builds a sink that does nothing.
-func NewNop() Sink {
-	return &nopSink{
-		baseSink: newBaseSink(),
+func NewNop[M any]() Sink[M] {
+	return &nopSink[M]{
+		baseSink: newCloseTrait(),
 	}
 }
 
-func (n nopSink) Write(_ events.Event) error {
+func (n nopSink[M]) Write(M) error {
 	return nil
 }

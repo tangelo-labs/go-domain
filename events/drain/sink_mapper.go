@@ -2,24 +2,22 @@ package drain
 
 import (
 	"fmt"
-
-	"github.com/tangelo-labs/go-domain/events"
 )
 
 // MapperFn defines a function maps an input event into another.
-type MapperFn func(event events.Event) (events.Event, error)
+type MapperFn[M any] func(M) (M, error)
 
-// mapperSink provides a sink that maps events into other events.
-type mapperSink struct {
+// mapperSink provides a sink that maps messages into other messages.
+type mapperSink[M any] struct {
 	*baseSink
-	dst    Sink
-	mapper MapperFn
+	dst    Sink[M]
+	mapper MapperFn[M]
 }
 
-// NewMapper builds sink that passes to dst mapped events.
-func NewMapper(dst Sink, mapper MapperFn) Sink {
-	sink := &mapperSink{
-		baseSink: newBaseSink(),
+// NewMapper builds sink that passes to dst mapped messages.
+func NewMapper[M any](dst Sink[M], mapper MapperFn[M]) Sink[M] {
+	sink := &mapperSink[M]{
+		baseSink: newCloseTrait(),
 		mapper:   mapper,
 		dst:      dst,
 	}
@@ -27,24 +25,24 @@ func NewMapper(dst Sink, mapper MapperFn) Sink {
 	return sink
 }
 
-func (ms *mapperSink) Write(event events.Event) error {
+func (ms *mapperSink[M]) Write(message M) error {
 	if ms.baseSink.IsClosed() {
-		return fmt.Errorf("%w: mapper sink could not write event %T", ErrSinkClosed, event)
+		return fmt.Errorf("%w: mapper sink could not write message %T", ErrSinkClosed, message)
 	}
 
-	ev, errM := ms.mapper(event)
+	ev, errM := ms.mapper(message)
 	if errM != nil {
-		return fmt.Errorf("%w: mapper sink could not map event %T", errM, event)
+		return fmt.Errorf("%w: mapper sink could not map message %T", errM, message)
 	}
 
 	if errD := ms.dst.Write(ev); errD != nil {
-		return fmt.Errorf("%w: mapper sink could not write event %T in underlying sink", errD, event)
+		return fmt.Errorf("%w: mapper sink could not write message %T in underlying sink", errD, message)
 	}
 
 	return nil
 }
 
-func (ms *mapperSink) Close() error {
+func (ms *mapperSink[M]) Close() error {
 	if errD := ms.dst.Close(); errD != nil {
 		return fmt.Errorf("%w: could not close underlying sink", errD)
 	}

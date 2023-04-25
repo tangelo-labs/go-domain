@@ -8,31 +8,30 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis"
 	"github.com/tangelo-labs/go-domain"
-	"github.com/tangelo-labs/go-domain/events"
 )
 
-// KinesisAPI represents a Kinesis client for sending events.
+// KinesisAPI represents a Kinesis client for sending messages.
 type KinesisAPI interface {
 	PutRecord(ctx context.Context, params *kinesis.PutRecordInput, optFns ...func(*kinesis.Options)) (*kinesis.PutRecordOutput, error)
 }
 
-type kinesisSink struct {
+type kinesisSink[M any] struct {
 	*baseSink
 	streamName string
 	kinesis    KinesisAPI
-	marshaller Marshaller
+	marshaller Marshaller[M]
 	timeout    time.Duration
-	onError    WriteErrorFn
+	onError    WriteErrorFn[M]
 }
 
-// NewKinesisSink builds a new sink that sends events to a Kinesis Stream.
-func NewKinesisSink(
+// NewKinesisSink builds a new sink that sends messages to a Kinesis Stream.
+func NewKinesisSink[M any](
 	streamName string,
 	api KinesisAPI,
-	marshaller Marshaller,
+	marshaller Marshaller[M],
 	timeout time.Duration,
-	onError WriteErrorFn,
-) (Sink, error) {
+	onError WriteErrorFn[M],
+) (Sink[M], error) {
 	if streamName == "" {
 		return nil, fmt.Errorf("a kinesis stream name must be provided")
 	}
@@ -50,11 +49,11 @@ func NewKinesisSink(
 	}
 
 	if onError == nil {
-		onError = noopWriteError
+		onError = noopWriteError[M]
 	}
 
-	return &kinesisSink{
-		baseSink:   newBaseSink(),
+	return &kinesisSink[M]{
+		baseSink:   newCloseTrait(),
 		streamName: streamName,
 		kinesis:    api,
 		marshaller: marshaller,
@@ -63,15 +62,15 @@ func NewKinesisSink(
 	}, nil
 }
 
-func (k *kinesisSink) Write(event events.Event) error {
+func (k *kinesisSink[M]) Write(message M) error {
 	if k.baseSink.IsClosed() {
-		return fmt.Errorf("%w: writer sink could not write event %T", ErrSinkClosed, event)
+		return fmt.Errorf("%w: writer sink could not write message %T", ErrSinkClosed, message)
 	}
 
 	ctx, cancelFunc := context.WithTimeout(context.Background(), k.timeout)
 	defer cancelFunc()
 
-	data, err := k.marshaller(event)
+	data, err := k.marshaller(message)
 	if err != nil {
 		return err
 	}
@@ -82,7 +81,7 @@ func (k *kinesisSink) Write(event events.Event) error {
 		Data:         data,
 	}); err != nil {
 		if k.onError != nil {
-			k.onError(event, err)
+			k.onError(message, err)
 		}
 
 		return err

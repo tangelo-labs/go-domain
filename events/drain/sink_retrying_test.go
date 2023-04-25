@@ -1,7 +1,6 @@
 package drain_test
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -11,34 +10,35 @@ import (
 )
 
 func TestRetryingSinkBreaker(t *testing.T) {
-	testRetryingSink(t, drain.NewBreakerStrategy(3, 10*time.Millisecond))
+	testRetryingSink(t, drain.NewBreakerStrategy[events.Event](3, 10*time.Millisecond))
 }
 
 func TestRetryingSinkExponentialBackoff(t *testing.T) {
-	testRetryingSink(t, drain.NewExponentialBackoff(drain.ExponentialBackoffConfig{
+	testRetryingSink(t, drain.NewExponentialBackoff[events.Event](drain.ExponentialBackoffConfig{
 		Base:   time.Millisecond,
 		Factor: time.Millisecond,
 		Max:    time.Millisecond * 5,
 	}))
 }
 
-func testRetryingSink(t *testing.T, strategy drain.RetrySinkStrategy) {
-	const nevents = 100
-	ts := newTestSink(t, nevents)
+func testRetryingSink[M any](t *testing.T, strategy drain.RetrySinkStrategy[M]) {
+	const nm = 100
 
-	// Make a sync that fails most of the time, ensuring that all the events
+	ts := newTestSink[M](t, nm)
+
+	// Make a sync that fails most of the time, ensuring that all the messages
 	// make it through.
-	flaky := &flakySink{
+	flaky := &flakySink[M]{
 		rate: 1.0, // start out always failing.
 		Sink: ts,
 	}
 
-	s := drain.NewRetrying(flaky, strategy, nil)
+	s := drain.NewRetrying[M](flaky, strategy, nil)
 
 	var wg sync.WaitGroup
 
-	for i := 1; i <= nevents; i++ {
-		event := "myevent-" + fmt.Sprint(i)
+	for i := 1; i <= nm; i++ {
+		var m M
 
 		// Above 50, set the failure rate lower
 		if i > 50 {
@@ -49,13 +49,13 @@ func testRetryingSink(t *testing.T, strategy drain.RetrySinkStrategy) {
 
 		wg.Add(1)
 
-		go func(event events.Event) {
+		go func(m M) {
 			defer wg.Done()
 
-			if err := s.Write(event); err != nil {
-				t.Errorf("error writing event: %v", err)
+			if err := s.Write(m); err != nil {
+				t.Errorf("error writing message: %v", err)
 			}
-		}(event)
+		}(m)
 	}
 
 	wg.Wait()
@@ -64,7 +64,7 @@ func testRetryingSink(t *testing.T, strategy drain.RetrySinkStrategy) {
 
 func TestExponentialBackoff(t *testing.T) {
 	config := drain.DefaultExponentialBackoffConfig
-	strategy := drain.NewExponentialBackoff(config)
+	strategy := drain.NewExponentialBackoff[events.Event](config)
 	backoff := strategy.Proceed(nil)
 
 	if backoff != 0 {
@@ -75,7 +75,7 @@ func TestExponentialBackoff(t *testing.T) {
 
 	for i := 1; i <= 10; i++ {
 		if strategy.Failure(nil, nil) {
-			t.Errorf("no facilities for dropping events in ExponentialBackoffStrategy")
+			t.Errorf("no facilities for dropping messages in ExponentialBackoffStrategy")
 		}
 
 		for j := 0; j < 1000; j++ {
