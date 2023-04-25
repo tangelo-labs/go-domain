@@ -20,7 +20,7 @@ func (r *evRequire) RecordedLen(t require.TestingT, recorder events.Recorder, ev
 }
 
 func (r *evRequire) WasRecorded(t require.TestingT, recorder events.Recorder, event interface{}, msgAndArgs ...interface{}) {
-	eventrequire.WastRecorded(t, recorder, event, msgAndArgs...)
+	eventrequire.WasRecorded(t, recorder, event, msgAndArgs...)
 }
 
 func (r *evRequire) WasNotRecorded(t require.TestingT, recorder events.Recorder, event interface{}, msgAndArgs ...interface{}) {

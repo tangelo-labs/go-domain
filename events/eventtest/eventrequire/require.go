@@ -16,9 +16,9 @@ func RecordedLen(t require.TestingT, recorder events.Recorder, event interface{}
 	t.FailNow()
 }
 
-// WastRecorded asserts that the given Recorder object has recorded the
+// WasRecorded asserts that the given Recorder object has recorded the
 // specified event type.
-func WastRecorded(t require.TestingT, recorder events.Recorder, event interface{}, msgAndArgs ...interface{}) {
+func WasRecorded(t require.TestingT, recorder events.Recorder, event interface{}, msgAndArgs ...interface{}) {
 	if eventassert.WasRecorded(t, recorder, event, msgAndArgs...) {
 		return
 	}
