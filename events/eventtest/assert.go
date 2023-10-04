@@ -30,3 +30,7 @@ func (a *evAssert) WasNotRecorded(t require.TestingT, recorder events.Recorder, 
 func (a *evAssert) SequenceWasRecorded(t require.TestingT, recorder events.Recorder, sequence []interface{}, msgAndArgs ...interface{}) bool {
 	return eventassert.SequenceWasRecorded(t, recorder, sequence, msgAndArgs...)
 }
+
+func (a *evAssert) Condition(t require.TestingT, recorder events.Recorder, condition func(event interface{}) bool, msgAndArgs ...interface{}) bool {
+	return eventassert.Condition(t, recorder, condition, msgAndArgs...)
+}

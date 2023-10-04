@@ -44,3 +44,13 @@ func SequenceWasRecorded(t require.TestingT, recorder events.Recorder, sequence 
 
 	t.FailNow()
 }
+
+// Condition asserts that the given Recorder object has recorded the
+// specified event type.
+func Condition(t require.TestingT, recorder events.Recorder, condition func(event interface{}) bool, msgAndArgs ...interface{}) {
+	if eventassert.Condition(t, recorder, condition, msgAndArgs...) {
+		return
+	}
+
+	t.FailNow()
+}
