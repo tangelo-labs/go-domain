@@ -30,3 +30,7 @@ func (r *evRequire) WasNotRecorded(t require.TestingT, recorder events.Recorder,
 func (r *evRequire) SequenceWasRecorded(t require.TestingT, recorder events.Recorder, sequence []interface{}, msgAndArgs ...interface{}) {
 	eventrequire.SequenceWasRecorded(t, recorder, sequence, msgAndArgs...)
 }
+
+func (r *evRequire) Condition(t require.TestingT, recorder events.Recorder, condition func(event interface{}) bool, msgAndArgs ...interface{}) {
+	eventrequire.Condition(t, recorder, condition, msgAndArgs...)
+}

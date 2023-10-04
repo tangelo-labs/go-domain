@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tangelo-labs/go-domain/events"
 )
 
@@ -67,6 +68,21 @@ func SequenceWasRecorded(t assert.TestingT, recorder events.Recorder, sequence [
 	}
 
 	return true
+}
+
+// Condition asserts that the given Recorder object has recorded an event that
+// matches the given condition.
+//
+// The provided condition function will be called for each recorded event until
+// it returns true.
+func Condition(t require.TestingT, recorder events.Recorder, condition func(event interface{}) bool, msgAndArgs ...interface{}) bool {
+	for _, change := range recorder.Changes() {
+		if condition(change) {
+			return true
+		}
+	}
+
+	return assert.Fail(t, "Condition failed", msgAndArgs...)
 }
 
 func fetchRecorded(recorder events.Recorder, event interface{}) []interface{} {
