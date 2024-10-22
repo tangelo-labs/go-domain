@@ -21,7 +21,7 @@ func TestQueue(t *testing.T) {
 		&delayedSink[events.Event]{
 			Sink:  ts,
 			delay: time.Millisecond * 1,
-		}, 1, nil)
+		}, 3, nil)
 
 	time.Sleep(10 * time.Millisecond) // let's queue settle to wait condition.
 
@@ -55,12 +55,12 @@ func TestQueue(t *testing.T) {
 }
 
 func TestQueueDrop(t *testing.T) {
-	const nm = 10
+	const nm = 1000
 
 	cc := atomic.NewInt64(0)
 	eq := drain.NewQueue[events.Event](
 		&dropperSink[events.Event]{err: errors.New("dropped")},
-		1,
+		3,
 		func(m events.Event, err error) {
 			cc.Add(1)
 		},

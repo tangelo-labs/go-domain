@@ -15,6 +15,7 @@ type queueSink[M any] struct {
 	list         *list.List
 	cond         *sync.Cond
 	mu           sync.Mutex
+	wg           sync.WaitGroup
 	closing      bool
 	dropHandling WriteErrorFn[M]
 }
@@ -44,7 +45,9 @@ func NewQueue[M any](dst Sink[M], throughput int, dropHandling WriteErrorFn[M]) 
 	}
 
 	eq.cond = sync.NewCond(&eq.mu)
+
 	for i := 0; i < throughput; i++ {
+		eq.wg.Add(1)
 		go eq.run()
 	}
 
@@ -69,17 +72,18 @@ func (eq *queueSink[M]) Write(m M) error {
 
 // Close shutdown the event queue, flushing.
 func (eq *queueSink[M]) Close() error {
-	eq.mu.Lock()
-	defer eq.mu.Unlock()
-
 	if eq.IsClosed() {
 		return nil
 	}
+
+	eq.mu.Lock()
 
 	// set closing flag
 	eq.closing = true
 	eq.cond.Signal() // signal flushes queue
 	eq.cond.Wait()   // wait for signal from last flush
+	eq.mu.Unlock()   // unlock to allow run to finish.
+	eq.wg.Wait()     // wait for all worker goroutines to finish
 
 	if errD := eq.dst.Close(); errD != nil {
 		eq.closing = false
@@ -98,6 +102,8 @@ func (eq *queueSink[M]) Close() error {
 
 // run is the main goroutine to flush messages to the target sink.
 func (eq *queueSink[M]) run() {
+	defer eq.wg.Done()
+
 	for {
 		envelope := eq.next()
 		if envelope.closed {
