@@ -4,13 +4,6 @@ run:
   # Default: 1m
   timeout: 15m
 
-  # Which dirs to skip: issues from them won't be reported.
-  # Can use regexp here: `generated.*`, regexp is applied on full path.
-  # Default value is empty list,
-  # but default dirs are skipped independently of this option's value (see skip-dirs-use-default).
-  # "/" will be replaced by current OS file path separator to properly work on Windows.
-  skip-dirs:
-
   # If set we pass it to "go list -mod={option}". From "go help modules":
   # If invoked with -mod=readonly, the go command is disallowed from the implicit
   # automatic updating of go.mod described above. Instead, it fails when any changes
@@ -30,32 +23,62 @@ run:
 
 # output configuration options
 output:
-  # Format: colored-line-number|line-number|json|tab|checkstyle|code-climate|junit-xml|github-actions
-  #
-  # Multiple can be specified by separating them by comma, output can be provided
-  # for each of them by separating format name and path by colon symbol.
+  # The formats used to render issues.
+  # Formats:
+  # - `colored-line-number`
+  # - `line-number`
+  # - `json`
+  # - `colored-tab`
+  # - `tab`
+  # - `html`
+  # - `checkstyle`
+  # - `code-climate`
+  # - `junit-xml`
+  # - `github-actions`
+  # - `teamcity`
+  # - `sarif`
   # Output path can be either `stdout`, `stderr` or path to the file to write to.
-  # Example: "checkstyle:report.json,colored-line-number"
   #
-  # Default: colored-line-number
-  format: line-number
+  # For the CLI flag (`--out-format`), multiple formats can be specified by separating them by comma.
+  # The output can be specified for each of them by separating format name and path by colon symbol.
+  # Example: "--out-format=checkstyle:report.xml,json:stdout,colored-line-number"
+  # The CLI flag (`--out-format`) override the configuration file.
+  #
+  # Default:
+  #   formats:
+  #     - format: colored-line-number
+  #       path: stdout
+  formats:
+    - format: colored-line-number
+      path: stdout
+
   # Print lines of code with issue.
   # Default: true
   print-issued-lines: true
+
   # Print linter name in the end of issue text.
   # Default: true
   print-linter-name: true
+
   # Make issues output unique by line.
   # Default: true
   uniq-by-line: true
+
   # Add a prefix to the output file references.
   # Default is no prefix.
   path-prefix: ""
+
   # Sort results by: filepath, line and column.
   sort-results: true
 
 # all available settings of specific linters
 linters-settings:
+  goimports:
+    # A comma-separated list of prefixes, which, if set, checks import paths
+    # with the given prefixes are grouped after 3rd-party packages.
+    # Default: ""
+    local-prefixes: ""
+
   # Settings for revive linter.
   revive:
     severity: warning
@@ -75,15 +98,24 @@ linters-settings:
     # List of functions to exclude from checking, where each entry is a single function to exclude.
     # See https://github.com/kisielk/errcheck#excluding-functions for details.
     exclude-functions:
+      - (github.com/go-kit/kit/log.Logger).Log
       - (io.Closer).Close
       - (net.Listener).Close
       - (net.Conn).Close
       - (net.PacketConn).Close
 
   govet:
-    # Report about shadowed variables.
-    # Default: false
-    check-shadowing: true
+    # Enable analyzers by name.
+    # (in addition to default:
+    #   appends, asmdecl, assign, atomic, bools, buildtag, cgocall, composites, copylocks, defers, directive, errorsas,
+    #   framepointer, httpresponse, ifaceassert, loopclosure, lostcancel, nilfunc, printf, shift, sigchanyzer, slog,
+    #   stdmethods, stringintconv, structtag, testinggoroutine, tests, timeformat, unmarshal, unreachable, unsafeptr,
+    #   unusedresult
+    # ).
+    # Run `GL_DEBUG=govet golangci-lint run --enable=govet` to see default, all available analyzers, and enabled analyzers.
+    # Default: []
+    enable:
+      - shadow
 
     # Settings per analyzer.
     settings:
@@ -96,10 +128,6 @@ linters-settings:
           - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
           - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
 
-  golint:
-    # minimal confidence for issues, default is 0.8
-    min-confidence: 0.8
-
   gofmt:
     # Simplify code: gofmt with `-s` option.
     # Default: true
@@ -109,10 +137,6 @@ linters-settings:
     # Minimal code complexity to report.
     # Default: 30 (but we recommend 10-20)
     min-complexity: 20
-
-  maligned:
-    # print struct with more effective memory layout or not, false by default
-    suggest-new: true
 
   dupl:
     # tokens count to trigger issue, 150 by default
@@ -125,12 +149,26 @@ linters-settings:
     # minimal occurrences count to trigger, 3 by default
     min-occurrences: 3
 
+  depguard:
+    rules:
+      gofakeit:
+        list-mode: original
+        files:
+          - "!**/*_test.go"
+          - "!**/mBaaS/pkg/**/*.go"
+          - "!**/pkg/client/**/*.go"
+        deny:
+          - pkg: github.com/brianvoe/gofakeit
+            desc: "gofakeit package can only be used in testing code, CLI clients or the Kernel"
+          - pkg: github.com/stretchr/testify
+            desc: "testify package can only be used in testing code or by the Kernel"
+
   misspell:
     # Correct spellings using locale preferences for US or UK.
     # Setting locale to US will correct the British spelling of 'colour' to 'color'.
     # Default is to use a neutral variety of English.
     locale: US
-    ignore-words:
+    ignore-words: []
 
   lll:
     # Max line length, lines longer will be reported.
@@ -141,13 +179,6 @@ linters-settings:
     # Tab width in spaces.
     # Default: 1
     tab-width: 1
-
-  unused:
-    # treat code as a program (not a library) and report unused exported identifiers; default is false.
-    # XXX: if you enable this setting, unused will report a lot of false-positives in text editors:
-    # if it's called for subdir of a project it can't find funcs usages. All text editor integrations
-    # with golangci-lint call it on a directory with the changed file.
-    check-exported: false
 
   unparam:
     # Inspect exported functions.
@@ -179,11 +210,11 @@ linters-settings:
     # Which checks should be enabled; can't be combined with 'disabled-checks'.
     # See https://go-critic.github.io/overview#checks-overview.
     # To check which checks are enabled run `GL_DEBUG=gocritic golangci-lint run`.
-    enabled-checks:
+    enabled-checks: []
 
     # Which checks should be disabled; can't be combined with 'enabled-checks'.
     # Default: []
-    disabled-checks:
+    disabled-checks: []
 
     # Enable multiple checks by tags, run `GL_DEBUG=gocritic golangci-lint run` to see all tags and checks.
     # See https://github.com/go-critic/go-critic#usage -> section "Tags".
@@ -204,7 +235,7 @@ linters-settings:
       hugeParam:
         # Size in bytes that makes the warning trigger.
         # Default: 80
-        sizeThreshold: 300
+        sizeThreshold: 333
       rangeValCopy:
         # Size in bytes that makes the warning trigger.
         # Default: 128
@@ -213,22 +244,19 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - deadcode
     - errcheck
     - gosimple
     - govet
     - ineffassign
     - staticcheck
-    - structcheck
     - typecheck
     - unused
-    - varcheck
     - gofmt
     - goimports
     - revive
     - dupl
     - nlreturn
-    - exportloopref
+    - copyloopvar
     - godot
     - noctx
     - prealloc
@@ -242,16 +270,27 @@ linters:
     - gocritic
     - gocyclo
     - wsl
+    - unused
+    #- wrapcheck
+    #- depguard
 
 issues:
+  # Which dirs to exclude: issues from them won't be reported.
+  # Can use regexp here: `generated.*`, regexp is applied on full path,
+  # including the path prefix if one is set.
+  # Default dirs are skipped independently of this option's value (see exclude-dirs-use-default).
+  # "/" will be replaced by current OS file path separator to properly work on Windows.
+  # Default: []
+  exclude-dirs:
+    - protos
+    - third_party
+    - missions
+
   # Independently from option `exclude` we use default exclude patterns,
   # it can be disabled by this option. To list all
   # excluded by default patterns execute `golangci-lint run --help`.
   # Default value for this option is true.
   exclude-use-default: false
-
-  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
-  max-per-linter: 0
 
   # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
   max-same-issues: 0

@@ -21,24 +21,29 @@ func TestIDNew(t *testing.T) {
 		runtime.GOMAXPROCS(numCPU)
 
 		max := 10000
+
 		var generated sync.Map
 
 		var wg sync.WaitGroup
 		{
 			for i := 1; i <= max; i++ {
 				wg.Add(1)
+
 				go func() {
 					defer wg.Done()
-					id := domain.NewID().String()
-					runtime.Gosched()
 
+					id := domain.NewID().String()
+
+					runtime.Gosched()
 					generated.Store(id, struct{}{})
 				}()
 			}
 		}
+
 		wg.Wait()
 
 		itemsCount := 0
+
 		generated.Range(func(key, value interface{}) bool {
 			itemsCount++
 
@@ -128,11 +133,14 @@ func TestIDMarshalingBinary(t *testing.T) {
 		require.NotEmpty(t, b)
 
 		t.Run("WHEN unmarshaling them back THEN they have the same original values", func(t *testing.T) {
-			var aR domain.ID
+			var (
+				aR domain.ID
+				bR domain.ID
+			)
+
 			require.NoError(t, aR.UnmarshalBinary(a))
 			require.True(t, idA.Equals(aR))
 
-			var bR domain.ID
 			require.NoError(t, bR.UnmarshalBinary(b))
 			require.True(t, idB.Equals(bR))
 		})
@@ -153,11 +161,14 @@ func TestIDMarshalingText(t *testing.T) {
 		require.NotEmpty(t, b)
 
 		t.Run("WHEN unmarshaling them back THEN they have the same original values", func(t *testing.T) {
-			var aR domain.ID
+			var (
+				aR domain.ID
+				bR domain.ID
+			)
+
 			require.NoError(t, aR.UnmarshalText(a))
 			require.True(t, idA.Equals(aR))
 
-			var bR domain.ID
 			require.NoError(t, bR.UnmarshalText(b))
 			require.True(t, idB.Equals(bR))
 		})
@@ -178,11 +189,14 @@ func TestIDMarshalingJSON(t *testing.T) {
 		require.NotEmpty(t, b)
 
 		t.Run("WHEN unmarshaling them back THEN they have the same original values", func(t *testing.T) {
-			var aR domain.ID
+			var (
+				aR domain.ID
+				bR domain.ID
+			)
+
 			require.NoError(t, aR.UnmarshalJSON(a))
 			require.True(t, idA.Equals(aR))
 
-			var bR domain.ID
 			require.NoError(t, bR.UnmarshalJSON(b))
 			require.True(t, idB.Equals(bR))
 		})
