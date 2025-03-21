@@ -8,12 +8,13 @@ import (
 	"github.com/botchris/go-pubsub"
 	"github.com/botchris/go-pubsub/provider/memory"
 	"github.com/stretchr/testify/require"
+	"github.com/tangelo-labs/go-domain/events"
 	"github.com/tangelo-labs/go-domain/events/drain"
 )
 
 func Test_BrokerSink(t *testing.T) {
 	t.Run("GIVEN a broker sink constructor WHEN we input invalid broker", func(t *testing.T) {
-		_, err := drain.NewBrokerSink[struct{}](nil, "topic")
+		_, err := drain.NewBrokerSink[events.Event](nil, "topic")
 
 		t.Run("THEN returns error", func(t *testing.T) {
 			require.Error(t, err)
@@ -21,7 +22,7 @@ func Test_BrokerSink(t *testing.T) {
 	})
 
 	t.Run("GIVEN a broker sink constructor WHEN we input invalid topic", func(t *testing.T) {
-		_, err := drain.NewBrokerSink[struct{}](nil, "topic")
+		_, err := drain.NewBrokerSink[events.Event](nil, "topic")
 
 		t.Run("THEN returns error", func(t *testing.T) {
 			require.Error(t, err)
@@ -29,7 +30,7 @@ func Test_BrokerSink(t *testing.T) {
 	})
 
 	t.Run("GIVEN a broker sink constructor WHEN we input invalid timeout", func(t *testing.T) {
-		_, err := drain.NewBrokerSink[struct{}](nil, "topic", drain.BrokerSinkWithTimeout(0))
+		_, err := drain.NewBrokerSink[events.Event](nil, "topic", drain.BrokerSinkWithTimeout(0))
 
 		t.Run("THEN returns error", func(t *testing.T) {
 			require.Error(t, err)
@@ -39,7 +40,7 @@ func Test_BrokerSink(t *testing.T) {
 	t.Run("GIVEN a closed broker sink", func(t *testing.T) {
 		brk := memory.NewBroker()
 
-		sink, err := drain.NewBrokerSink[struct{}](brk, "topic")
+		sink, err := drain.NewBrokerSink[events.Event](brk, "topic")
 		require.NoError(t, err)
 
 		err = sink.Close()
@@ -60,7 +61,7 @@ func Test_BrokerSink(t *testing.T) {
 
 		brk := memory.NewBroker()
 
-		sink, err := drain.NewBrokerSink[struct{}](brk, "topic")
+		sink, err := drain.NewBrokerSink[events.Event](brk, "topic")
 		require.NoError(t, err)
 
 		published := false
